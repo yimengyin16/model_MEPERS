@@ -1,6 +1,7 @@
 ## This script conducts the simulation of the finance of the plan
 
-
+## Development log
+{
 ## Version log MEPERS(1)
 #  - go through the simulation without MEPERS risk sharing feature
 #  - check consistency. (consistency issue found, to be fixed)
@@ -9,7 +10,13 @@
 ## Version log MEPERS(2)
 #  - implement shared ADC policy and EEC, ERC caps
 #  - remove unnecessary code found in version (1)
+#  - consistency issue remains
 
+## Version log MEPERS(3)
+#' - first version of contingent COLA, simple approach
+#' - consistency issue resolved
+  
+}
 
 
 
@@ -34,7 +41,7 @@ run_sim <- function(i.r_ = i.r,
   # Run the section below when developing new features.
   
   # dev --
-  
+# 
   # i.r_ = i.r
   # sim_paramlist_ = sim_paramlist
   # Global_paramlist_ = Global_paramlist
@@ -52,19 +59,9 @@ run_sim <- function(i.r_ = i.r,
   tier_names <- names(valData$indivLiab) # names of all component tiers
   
   #*****************************************************************************
-  #          To be removed    Special settings for modeling CalPERS PERF A      ####
+  #           Special settings for modeling CalPERS PERF A      ####
   #***************************************************************************** 
   
-  # Set initial total amortization basis
-  
-  
-  if(use_baselineUAAL|newBasisPolicyChg){
-    df_baseline <- readRDS(paste0(dir_outputs, "sim_", sim_name_baseline, ".rds"))$results
-    UAAL.year1.baseline <- df_baseline %>% filter(sim == 0, year == init_year) %>% pull(UAAL)
-    AL.year1.baseline <- df_baseline %>% filter(sim == 0, year == init_year) %>% pull(AL)
-  }
-  
-
   # Set initial assets
   if(use_baselineMA){
     df_baseline <- readRDS(paste0(dir_outputs, "sim_", sim_name_baseline, ".rds"))$results
@@ -90,7 +87,7 @@ run_sim <- function(i.r_ = i.r,
   for(tierName in tier_names){
   
   # dev --
-    tierName = "regularAll"
+    #tierName = "regularAll"
     
     
   ls_servRet0[[tierName]] <-
@@ -101,9 +98,10 @@ run_sim <- function(i.r_ = i.r,
     ) %>%
     mutate(across(everything(), na2zero)) %>%
     mutate(start_year  = year - (age - ea),
-           age_servRet = age - (year - year_servRet)
+           age_servRet = age - (year - year_servRet),
+           grp = tierName
            ) %>%
-    select(start_year, ea, age, age_servRet, year_servRet, year, B.servRet.la, ALx.servRet.la, n_servRet.la, ax.servRet)
+    select(grp, start_year, ea, age, age_servRet, year_servRet, year, B.servRet.la, ALx.servRet.la, n_servRet.la, ax.servRet)
 
   ls_servRet0[[tierName]] %<>%
     mutate(B.servRet.la   = ifelse(year_servRet == year , B.servRet.la, 0),
@@ -118,10 +116,78 @@ run_sim <- function(i.r_ = i.r,
     ungroup() %>% 
     filter(n_sum != 0) %>% 
     mutate(n_sum = NULL)
+  
+  ls_servRet0 <- bind_rows(ls_servRet0)
+  
+  
+  
   }
 
   # ls_servRet0$regularAll
     
+  
+  #******************************************************************************* 
+  #                   COLA-AL relationship with "$1 benefit"   ####
+  #*******************************************************************************
+  
+  ## Calculate PVB of "unit benefit" at all ages in retirement with a grid of COLA rates
+  
+  ## Notes:
+  # As contingent COLA is not applied to deferred retirement benefit, all calculations are based on 
+  # regular retirement for now. 
+  # This may change in the future. Modified lines are marked with "#TEMP"
+  
+  # 
+  # 
+  # if(cola_type == "riskSharing"){
+  #   # cola grid from 0 to 3% by 0.1%
+  #   cola_grid <- seq(0, by = 0.001, len =26)
+  #   
+  #   #TEMP Currently, requires that all tiers use the same non-generational mortality table for retirees
+  #   decrements_temp <- 
+  #     valData$decrements[[1]] %>% 
+  #     ungroup %>% 
+  #     filter(ea == min(ea)) %>% 
+  #     select(age, qxm.post)
+  #   
+  #   
+  #   
+  #   # PVB for each cola rate for $1 benefit
+  #   df_PVB_colaGrid <- sapply(cola_grid, function(x) mapply(get_PVB_retiree, min_retAge:max_age, 
+  #                                                           MoreArgs = list(benefit_init = 1, dr_ = i, cola_assumed = x, 
+  #                                                                           decrement = decrements_temp, age_max_ = max_age ))) %>% t
+  #   colnames(df_PVB_colaGrid) <- min_retAge:max_age
+  #   
+  #   df_PVB_colaGrid %<>% 
+  #     as_tibble() %>% 
+  #     mutate(cola = cola_grid) %>% 
+  #     select(cola, everything()) %>% 
+  #     gather(age, PVB1, -cola) %>% 
+  #     mutate(age = factor(age, levels = min_retAge:max_age)) %>% 
+  #     select(age, cola, PVB1)
+  #   # df_PVB_colaGrid
+  #   
+  #   
+  #   ## COLA-AL relationship for retirees (group by age)
+  #   
+  #   # Fit the COLA-AL curve for each age group using polynomials of order 3
+  #   p_coeff_retirees <- 
+  #     df_PVB_colaGrid %>% 
+  #     split(df_PVB_colaGrid$age) %>% 
+  #     map( ~ lm(PVB1 ~ cola + I(cola^2) + I(cola^3), data = .)) %>% 
+  #     map(coefficients) %>% 
+  #     bind_rows() %>% 
+  #     # t %>% 
+  #     as_tibble() %>% 
+  #     mutate(age = min_retAge:max_age) %>% 
+  #     rename(b0 = 1, b1=2, b2=3, b3 =4)
+  #   
+  #   p_coeff_retirees
+  #   
+  # }
+  # 
+  # 
+  
        
   #*****************************************************************************
   #                       Defining variables in simulation ####
@@ -222,13 +288,11 @@ run_sim <- function(i.r_ = i.r,
     	     C_PR = 0,
     			 
     	     # Contingent COLA
-    	     cola_actual = 0.025
-    	     #AL_lowerDR  = 0,
-    	     #FR_MA_lowerDR  = 0
+    	     cola_actual  = cola_assumed,
+    	     
+    	     COLA_triggered = 0
     	     
     			 ## Additional/plan specific variables
-
-
     			    			 )
   # penSim0 <- as.list(penSim0)
   
@@ -458,13 +522,13 @@ run_sim <- function(i.r_ = i.r,
   ## Adjusting initil unrecognized returns for the MA-AA difference in the model
   
   # TEMP for MEPERS
-  valData$init_unrecReturns.unadj <- 
-    tribble(
-      ~year, ~DeferredReturn,
-      2020, 1,
-      2021, 1,
-      2022, 1
-    )
+  # valData$init_unrecReturns.unadj <- 
+  #   tribble(
+  #     ~year, ~DeferredReturn,
+  #     2020, 1,
+  #     2021, 1,
+  #     2022, 1
+  #   )
   
   
   init_unrecReturns.adj <-  mutate(valData$init_unrecReturns.unadj,
@@ -499,12 +563,12 @@ run_sim <- function(i.r_ = i.r,
     
     for (j in 1:nyear){
         
-    # it_j <- iterators::iter(1:nyear)
-    # j    <- iterators::nextElem(it_j); j
+     # it_j <- iterators::iter(1:nyear)
+     # j    <- iterators::nextElem(it_j); j
       
     	
     	#***********************************
-      #   __MA(j), AA(j) and UAAL(j) ####
+      # __MA(j), AA(j) and UAAL(j) ####
       #***********************************
     	
     	# Year 1
@@ -557,43 +621,68 @@ run_sim <- function(i.r_ = i.r,
     	}
 
       
-      #******************************************
-      #    __Liability and funded status    ####
-      #******************************************
+      #***********************************************************
+      #  __Pre-risk-sharing: Liability and funded status      ####
+      #***********************************************************
       
       # j <- 2018
       # cola_actual <- 0.01
     
-    if(useContingentCOLA){  
+    if(cola_type == "riskSharing"){  
         
       if(j > 1) {
         
-        for(tierName in tier_names){
+        # for(tierName in tier_names){
+        # 
+        # ls_servRet[[tierName]] <- 
+        #   mutate(ls_servRet[[tierName]],
+        #          B.servRet.la   = ifelse(year == (init_year + j - 1) & year > year_servRet, 
+        #                                  lag(B.servRet.la, 1, 0) * (1 + penSim$cola_actual[j-1]), 
+        #                                  B.servRet.la),
+        #          ALx.servRet.la = B.servRet.la * ax.servRet)
+        # }
         
-        ls_servRet[[tierName]] <- 
-          mutate(ls_servRet[[tierName]],
-                 B.servRet.la   = ifelse(year == (init_year + j - 1) & year > year_servRet, 
-                                         lag(B.servRet.la, 1, 0) * (1 + penSim$cola_actual[j-1]), 
-                                         B.servRet.la),
-                 ALx.servRet.la = B.servRet.la * ax.servRet)
+       # MEPERS:  
+       #  - Note that ax.servRet is calculated based on the long-term COLA assumption of 1.91%
+       #  - B.servRet.la is updated with the COLA determined in the previous year, so it will not
+       #    be modified by the risk-sharing process below.
+        
+       ls_servRet <- 
+            mutate(ls_servRet,
+                   B.servRet.la   = ifelse(year == (init_year + j - 1) & year > year_servRet, 
+                                           lag(B.servRet.la, 1, 0) * (1 + penSim$cola_actual[j-1]), 
+                                           B.servRet.la),
+                   ALx.servRet.la = B.servRet.la * ax.servRet)
         }
-      }
+        
+        
+      
         
       #ls_servRet %>% filter(start_year == 2000, ea ==34, age_servRet == 53)
       
+     
       # Calculate total benefit and AL for service retirees
       
-      penSim$AL.servRet[j] <- 
-        ls_servRet %>% 
-        map(~ (filter(.x, year == init_year + j - 1) %>% summarise(AL.servRet.la = sum(ALx.servRet.la * n_servRet.la)))$AL.servRet.la) %>% 
-        unlist %>% 
-        sum()
-      
-      penSim$B.servRet[j] <- 
-      ls_servRet %>% 
-        map(~ (filter(.x, year == init_year + j - 1) %>% summarise(B.servRet.la  = sum(B.servRet.la * n_servRet.la)))$B.servRet.la) %>% 
-        unlist %>% 
-        sum()
+      # MEPERS: again, B.servRet[j] will not be futher modified in the current loop 
+       penSim$B.servRet[j] <- 
+         (filter(ls_servRet, year == init_year + j - 1) %>% summarise(B.servRet.la  = sum(B.servRet.la * n_servRet.la)))$B.servRet.la
+         
+       penSim$AL.servRet[j] <- 
+         (filter(ls_servRet, year == init_year + j - 1) %>% summarise(AL.servRet.la = sum(ALx.servRet.la * n_servRet.la)))$AL.servRet.la
+     
+       
+      # penSim$AL.servRet[j] <- 
+      #   ls_servRet %>% 
+      #   map(~ (filter(.x, year == init_year + j - 1) %>% summarise(AL.servRet.la = sum(ALx.servRet.la * n_servRet.la)))$AL.servRet.la) %>% 
+      #   unlist %>% 
+      #   sum()
+      # 
+      # 
+      # penSim$B.servRet[j] <- 
+      #   ls_servRet %>% 
+      #   map(~ (filter(.x, year == init_year + j - 1) %>% summarise(B.servRet.la  = sum(B.servRet.la * n_servRet.la)))$B.servRet.la) %>% 
+      #   unlist %>% 
+      #   sum()
       
       
       # penSim$AL.servRet[j] <- (filter(ls_servRet, year == init_year + j - 1) %>% summarise(AL.servRet.la = sum(ALx.servRet.la * n_servRet.la)))$AL.servRet.la
@@ -626,31 +715,10 @@ run_sim <- function(i.r_ = i.r,
     penSim$UAAL[j]    <- with(penSim, AL[j] - AA[j])
   
       
-    #**********************************************
-    #       __Determining (contingent) COLA     #### 
-    #**********************************************
-      
-      # funded ratio based COLA
-      if(useContingentCOLA){
-        
-        if(!is.na(use_lowerDR)){
-          
-          penSim$FR_MA_lowerDR[j] <- with(penSim, MA[j] / (AL[j] * cola_lowerDR_fixedALratio))
-          if(penSim$FR_MA_lowerDR[j] >= 0.9999) penSim$cola_actual[j] <- cola_max_FR else penSim$cola_actual[j] <- cola_min_FR # use 99.99 to avoid rounding issue
-          
-        } else {
-          
-          if(penSim$FR_MA[j] >= 0.9999) penSim$cola_actual[j] <- cola_max_FR else penSim$cola_actual[j] <- cola_min_FR # use 99.99 to avoid rounding issue
-          
-        }
-        
-       
-      }
-      
-           
-      #******************************************
-      #   2. Losses/gains and amoritization    **
-      #******************************************
+    
+      #*************************************************************
+      #   __Pre risk sharing: Amoritization costs               ####
+      #*************************************************************
       
       # Notes on useAVamort
       # if useAVamort is FALSE: It is assumed that the entire UAAL in year 1 is the loss/gain that occurs in year 0
@@ -685,12 +753,16 @@ run_sim <- function(i.r_ = i.r,
                              open   = amort_LG(penSim$UAAL[j], i, m, salgrowth_amort, end = FALSE, method = amort_method, skipY1 = FALSE)[1])
       
       
+      
      
-      #************************************************************************
+      
+      
+      
+     
+      #*****************************************************************************************
       #   __ADC, ERC, and total contribution with individual cost method ####
-      #************************************************************************
-      
-      
+      #****************************************************************************************
+
       # Notes on nonNegC and EEC_fixed
      
       
@@ -759,12 +831,7 @@ run_sim <- function(i.r_ = i.r,
       } 
      
       
-    
-      #************************************************************************
-      #   __Choose which cost method to apply   ####
-      #************************************************************************
       
-      #if(cost_method == "EAN"){
       # C(j)
       penSim$C[j] <- with(penSim, EEC[j] + ERC[j])
       
@@ -772,6 +839,53 @@ run_sim <- function(i.r_ = i.r,
       penSim$C_ADC[j] <- with(penSim, C[j] - ADC[j])
       # }
   
+    
+      
+      #******************************************
+      #   __MEPERS COLA                     ####
+      #******************************************
+      
+      # MEPERS
+      # Risk-sharing is triggered if ADC rate is greater than EEC cap + ERC cap (9% + 12.5% = 21.5%)
+      # Find the max COLA rate, if applied immediately, that can bring the ADC rate back under the cap. (21.5%)
+      # Note that the such determined COLA rate will be actually applied in the next year and create a gain then. 
+      
+      # AA_0_pct <- MA_0_pct <- 0.75
+      #(penSim$SC[j] + penSim$NC[j])/penSim$PR[j]
+      
+      if(cola_type == "riskSharing" & (penSim$SC[j] + penSim$NC[j])/penSim$PR[j] > ERC_cap + EEC_cap){
+      
+      penSim$COLA_triggered[j] <- 1  
+          
+      ## Determine the target level of AL
+        
+      # First, determine the required amount of contribution reduction
+      C_reduciton <- (penSim$SC[j] + penSim$NC[j]) - (ERC_cap + EEC_cap)* penSim$PR[j]
+      
+      # Second, determine the actuarial gain (amortization basis) needed to create the required
+      #   contribution reduction.
+      #   
+      # For MERERS, this is based on 20-year closed constant percent amortization method.
+      
+      AL_reduction <- gaip_inverse(C_reduciton, i, m, g = salgrowth_amort)
+      
+      # check: gaip(AL_reduction, i, n = 20, g = salgrowth_amort)
+      # AL_reduction /penSim$AL[j]
+      
+      # Third, determine the target AL for service retirees
+      AL_servRet_target <- penSim$AL.servRet[j] - AL_reduction
+      
+      
+      # Fourth, determine the benenfit reduction needed to create that AL reduction
+      COLA_target <- (1 + cola_assumed) *  AL_servRet_target / penSim$AL.servRet[j] - 1
+      
+      #penSim$AL.servRet[j] / (1+cola_assumed) - penSim$AL.servRet[j]
+      # gaip(35474684, i, n = 20, g = salgrowth_amort)/penSim$PR[j]
+      
+      # COLA must be in the range of 0~2.5%
+      
+      penSim$cola_actual[j] <- max(min(cola_max, COLA_target), cola_min)
+      }
       
       #******************************************
       #   __Investment income              ####

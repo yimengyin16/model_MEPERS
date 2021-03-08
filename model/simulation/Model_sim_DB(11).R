@@ -265,7 +265,7 @@ sim_retirees0 <-
 ## Notes:
  # As contingent COLA is not applied to deferred retirement benefit, all calculations are based on 
  # regular retirement for now. 
- # This may change in the future.Modified lines are marked with "#TEMP"
+ # This may change in the future. Modified lines are marked with "#TEMP"
 
 
 

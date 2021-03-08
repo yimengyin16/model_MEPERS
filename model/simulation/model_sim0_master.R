@@ -42,9 +42,11 @@ i.r[1:10, 1:5]
 # } else {
 #   source("model/simulation/model_sim_simulation.R")
 # }
-# source("model/simulation/model_sim_simulation_MEPERS(1).R") # no caps, no risk sharing
 
-source("model/simulation/model_sim_simulation_MEPERS(2).R")
+# source("model/simulation/model_sim_simulation_MEPERS(1).R") # no caps, no risk sharing
+# source("model/simulation/model_sim_simulation_MEPERS(1).R") # caps, no risk sharing
+
+source("model/simulation/model_sim_simulation_MEPERS(3).R") # caps, simple contingent COLA
 
 {
   start_time <- Sys.time()	
@@ -81,7 +83,7 @@ saveRDS(outputs_list, file = paste0(dir_outputs, "sim_", sim_name_run, ".rds"))
 
 # Display1 Basic examination
 var_display1 <- c("sim_name", "val_name", "sim", "year", 
-                  "AL", "FR_MA",  "UAAL", "ERC", "ERC_PR", "NC",
+                  "AL", "FR_MA",  "UAAL", "ERC", "ERC_PR","EEC_PR", "NC",
                   "MA",
                   "AL", 
                   "AL.active", "AL.nonactive",
@@ -111,7 +113,7 @@ var_display1 <- c("sim_name", "val_name", "sim", "year",
 # "n.ca.R1", "n.ca.R0S1", "nterms",
 # "ndisb.la", "ndisb.ca.R1", "ndisb.ca.R0S1" )
 
-penSim_results %>% filter(sim == -2)  %>% select(one_of(var_display1))  %>% print
+penSim_results %>% filter(sim == 5)  %>% select(one_of(var_display1))  %>% print
 # penSim_results %>% filter(sim == 1)  %>% select(one_of(var_display1))  %>% print
 # penSim_results %>% filter(sim == -2) %>% select(one_of(var_display1))  %>% print
 

@@ -1,3 +1,67 @@
+
+
+## Function for calculating PVB for retirees Modified 
+get_PVB_retiree <- function(age_fn, benefit_init, cola_assumed, dr_, decrement = df_decrement, age_max_ = max_age ) {
+	# calculates actuarial PV for given age, initial benefit, 
+	# cola assumption, and mortality 
+	
+	# This version does not allow for generational mortality
+	
+	# age_fn: current age
+	# benefit_init: current benefit payment
+	# cola_assumed: assumed future annual cola
+	# i: discount rate
+	
+	nyear_ret <- age_max_ - age_fn + 1
+	
+	decrement_fn <- filter(decrement, age >= age_fn)$qxm.post
+	
+	PVB <- sum(((1 + dr_)^-(0:(nyear_ret - 1))) * c(1, cumprod(1-decrement_fn)[-nyear_ret]) * (benefit_init * (1 + cola_assumed)^(0:(nyear_ret-1))))
+}
+
+
+## Function for calculating PVB for actives   
+get_PVB_active <- function(age_fn, ea_fn, age_ret, benefit_init, cola_assumed, i, decrement = df_decrement, age_max_ = age_max) {
+	# calculates actuarial PV for an active plan member.  
+	
+	# age_fn: current age
+	# benefit_init: benefit payment at age age_ret
+	# cola_assumed: assumed future annual cola
+	# i: discount rate
+	# decrement: decrement table. qxm is the mortality rate for retirees, qxT is the total separation rate for actives (mortality included) 
+	
+	# 	mortality_ = mortality
+	# 	age_max_ = age_max
+	#   i <- 0.075
+	
+	nyear_ret <- age_max_ - age_ret + 1
+	
+	decrement_ret <- filter(decrement, age >= age_ret, ea == ea_fn)$qxm
+	decrement_act <- filter(decrement, age>= age_fn, age< age_ret, ea == ea_fn)$qxT
+	
+	PVB <- sum(((1 + i)^-(0:(nyear_ret - 1))) * c(1, cumprod(1-decrement_ret)[-nyear_ret]) * (benefit_init * (1 + cola_assumed)^(0:(nyear_ret-1)))) *
+		((1 + i)^-((age_ret - age_fn)) * prod(1-decrement_act))
+	
+	
+}
+
+
+gaip_inverse <- function(pmt, i, n, g){
+	# pmt = first-year payment, i=interest rate, n=periods, g=growth rate in payments
+	# calculating the principle given the first-year payment
+	# Note: payment at the beginning of period. 
+	#if(end) p <- p*(1 + i) 
+	k <- (1 + g)/(1 + i)
+	a_sn <- (1 - k^n )/(1 - k)
+	#pmt <- p/a_sn
+	p = pmt *a_sn
+	return(p)
+}
+
+
+
+
+
 #**************************************
 #    1. PV of Annuities           #####
 #**************************************
@@ -233,6 +297,10 @@ gaip <- function(p, i, n, g, end = FALSE){
   pmt <- p/a_sn
   return(pmt)
 }
+
+
+
+
 
 # gaip(100, 0.10, 10, 0.04)
 # gaip3(100, 0.08, 10, 0.02, end = TRUE)

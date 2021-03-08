@@ -212,16 +212,14 @@ if (val_paramlist$estInitTerm){
 aggLiab$sumTiers <-
 	get_AggLiab_sumTiers(aggLiab)
 
-
-
-aggLiab$sumTiers
+# aggLiab$sumTiers
 
 
 #*******************************************************************************
 #    plan information associated with this valuation        ####
 #*******************************************************************************
 
-load(filePath_planInfo) # %>% print
+load(filePath_planInfo)  # %>% print
 
 init_amort_include <- character()
 init_amort_include <- "all"
@@ -244,7 +242,19 @@ init_amort_raw_val <-
   filter(grp %in% init_amort_include)
 
 
-# init_unrecReturns.unadj_val <- init_unrecReturns.unadj, N/A for MEPERS
+init_unrecReturns.unadj_val <- init_unrecReturns.unadj # 
+
+#*******************************************************************************
+#  Save decrements          ####
+#*******************************************************************************
+
+decrements <- list()
+
+for (tierName in names(ls_tierData)){
+  decrements[[tierName]] <- ls_tierData[[tierName]]$decrements
+}
+
+
 
 #*******************************************************************************
 #  Save outputs          ####
@@ -256,8 +266,9 @@ saveRDS(
       aggLiab   = aggLiab,
       indivLiab = indivLiab,
       pop = pop,
-      init_amort_raw = init_amort_raw_val
-      # init_unrecReturns.unadj = init_unrecReturns.unadj_val
+      init_amort_raw = init_amort_raw_val,
+      decrements = decrements,
+      init_unrecReturns.unadj = init_unrecReturns.unadj_val
     ),
   file = paste0(dir_outputs_val, "val_", val_name_run, ".rds")
 )

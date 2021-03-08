@@ -53,10 +53,10 @@ init_amort_raw <-
 #*******************************************************************************
 #                      ## Unrecognized investment gains/losses  ####
 #*******************************************************************************
-# init_unrecReturns.unadj <- read_excel_range(filePath_dataRaw, "Init_unrecReturn")
-# init_unrecReturns.unadj <-
-#   init_unrecReturns.unadj$df %>% 
-#   mutate(AV_date = init_unrecReturns.unadj$tblInfo$AV_date)
+init_unrecReturns.unadj <- read_excel_range(filePath_dataRaw, "Init_unrecReturn")
+init_unrecReturns.unadj <-
+  init_unrecReturns.unadj$df %>%
+  mutate(AV_date = init_unrecReturns.unadj$tblInfo$AV_date)
 
 
 
@@ -65,5 +65,5 @@ init_amort_raw <-
 #*******************************************************************************
 
 save(init_amort_raw,
-		 #init_unrecReturns.unadj,
+		 init_unrecReturns.unadj,
 		 file = paste0(dir_dataOut, "Data_MEPERS_planInfo_AV2020.RData"))

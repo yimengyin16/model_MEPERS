@@ -222,7 +222,7 @@ run_sim <- function(i.r_ = i.r,
     	     C_PR = 0,
     			 
     	     # Contingent COLA
-    	     cola_actual = 0.025
+    	     cola_actual = 0.0191
     	     #AL_lowerDR  = 0,
     	     #FR_MA_lowerDR  = 0
     	     
