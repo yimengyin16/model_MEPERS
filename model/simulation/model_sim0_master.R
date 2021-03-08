@@ -42,8 +42,9 @@ i.r[1:10, 1:5]
 # } else {
 #   source("model/simulation/model_sim_simulation.R")
 # }
-source("model/simulation/model_sim_simulation_MEPERS(1).R")
+# source("model/simulation/model_sim_simulation_MEPERS(1).R") # no caps, no risk sharing
 
+source("model/simulation/model_sim_simulation_MEPERS(2).R")
 
 {
   start_time <- Sys.time()	
@@ -110,7 +111,7 @@ var_display1 <- c("sim_name", "val_name", "sim", "year",
 # "n.ca.R1", "n.ca.R0S1", "nterms",
 # "ndisb.la", "ndisb.ca.R1", "ndisb.ca.R0S1" )
 
-penSim_results %>% filter(sim == 0)  %>% select(one_of(var_display1))  %>% print
+penSim_results %>% filter(sim == -2)  %>% select(one_of(var_display1))  %>% print
 # penSim_results %>% filter(sim == 1)  %>% select(one_of(var_display1))  %>% print
 # penSim_results %>% filter(sim == -2) %>% select(one_of(var_display1))  %>% print
 
