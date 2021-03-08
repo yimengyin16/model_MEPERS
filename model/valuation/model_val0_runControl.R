@@ -47,14 +47,14 @@ val_runList <-
 #                    ### Run valuations   ####                      
 #*******************************************************************************
 
-source("model/valuation2/model_val_master_multiTier(1).R")
+source("model/valuation/model_val0_master_multiTier(1).R")
 
 
 # val_name_run <- val_runList$val_name[1]
 
-# for (val_name_run in val_runList$val_name){
-#   create_val_2tiers(val_name_run)
-# }
+for (val_name_run in val_runList$val_name){
+  create_val(val_name_run)
+}
 
 
 

@@ -8,7 +8,7 @@
 # val_name_run <- val_runList$val_name[1]
 # create_val_2tiers(val_name_run)
 
-create_val_2tiers <- function(val_name_run){
+create_val <- function(val_name_run){
 
   
 ## dev --
