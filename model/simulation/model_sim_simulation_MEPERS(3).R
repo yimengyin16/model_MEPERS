@@ -380,9 +380,9 @@ run_sim <- function(i.r_ = i.r,
  
   # Number of members
   penSim0$n_actives  <- valData$aggLiab[[tn]]$active[, "nactives"]
-  penSim0$n_servRet <- valData$aggLiab[[tn]]$servRet.la[, "n_servRet.la"]
-  penSim0$n_defrRet <- valData$aggLiab[[tn]]$defrRet[, "n_defrRet"]
-  penSim0$n_disbRet <- valData$aggLiab[[tn]]$disbRet[, "n_disbRet"]
+  penSim0$n_servRet  <- valData$aggLiab[[tn]]$servRet.la[, "n_servRet.la"]
+  penSim0$n_defrRet  <- valData$aggLiab[[tn]]$defrRet[, "n_defrRet"]
+  penSim0$n_disbRet  <- valData$aggLiab[[tn]]$disbRet[, "n_disbRet"]
   penSim0$n_deathBen <- valData$aggLiab[[tn]]$death[, "n_deathBen"]
   
   #penSim0$ndisb.ca.R0S1 <- valData$aggLiab[[tn]]$disb.ca[,  "n.disb.R0S1"]
@@ -787,10 +787,10 @@ run_sim <- function(i.r_ = i.r,
       
       
       
-      if(EEC_type != "sharedADC"){
+      if(EEC_type == "fixedRate"){
       # EEC(j) 
       # TEMP for MEPERS
-      penSim$EEC[j] <- with(penSim, PR[j] * 0.06)
+      penSim$EEC[j] <- with(penSim, PR[j] * EEC_fixedRate)
       
       # ADC(j)
       
@@ -860,14 +860,14 @@ run_sim <- function(i.r_ = i.r,
       ## Determine the target level of AL
         
       # First, determine the required amount of contribution reduction
-      C_reduciton <- (penSim$SC[j] + penSim$NC[j]) - (ERC_cap + EEC_cap)* penSim$PR[j]
+      C_reduction <- (penSim$SC[j] + penSim$NC[j]) - (ERC_cap + EEC_cap)* penSim$PR[j]
       
       # Second, determine the actuarial gain (amortization basis) needed to create the required
       #   contribution reduction.
       #   
       # For MERERS, this is based on 20-year closed constant percent amortization method.
       
-      AL_reduction <- gaip_inverse(C_reduciton, i, m, g = salgrowth_amort)
+      AL_reduction <- gaip_inverse(C_reduction, i, m, g = salgrowth_amort)
       
       # check: gaip(AL_reduction, i, n = 20, g = salgrowth_amort)
       # AL_reduction /penSim$AL[j]
@@ -912,12 +912,14 @@ run_sim <- function(i.r_ = i.r,
   
   stopCluster(cl)
   
+  
+  # penSim_results
 
   
   #*****************************************************************************
   #                    Combining results into a data frame.   ####
   #*****************************************************************************
-  
+  # penSim_results %>% filter(sim == 3)
   
   penSim_results <- bind_rows(penSim_results) %>% 
     mutate(
