@@ -25,11 +25,10 @@
 df_simNames <- 
 	tribble(
 		~simName, ~label_benPolicy,
-		"Dev",              "dev current policy",
-		"Dev_fixedCola",    "dev fixed COLA, w/ caps",
-		"Dev_noRS",         "dev fixed COLA, no caps"
+		"regularAll_sharedADC_vCola",      "Shared ADC and Variable COLA",
+		"regularAll_sharedADC_fixedCola",  "Shared ADC and fixed COLA",
+		"regularAll_sharedNC_fixedCola",   "shared NC and Variable COLA; EEC floor 0"
 		)
-
 
 
 results_all <- 

@@ -6,6 +6,9 @@ output:
     number_sections: yes
   word_document:
     toc: yes
+  html_document:
+    toc: yes
+    df_print: paged
 editor_options:
   chunk_output_type: inline
 ---

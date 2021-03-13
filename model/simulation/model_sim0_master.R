@@ -46,7 +46,7 @@ i.r[1:10, 1:5]
 # source("model/simulation/model_sim_simulation_MEPERS(1).R") # no caps, no risk sharing
 # source("model/simulation/model_sim_simulation_MEPERS(1).R") # caps, no risk sharing
 
-source("model/simulation/model_sim_simulation_MEPERS(3).R") # caps, simple contingent COLA
+source("model/simulation/model_sim_simulation_MEPERS(4).R") # caps, simple contingent COLA
 
 {
   start_time <- Sys.time()	

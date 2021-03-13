@@ -494,6 +494,14 @@ save(
 )
 
 
+## save df_n_servRet_fillin to be used as benefit scale for SDRS
+df_n_servRet_fillin_MEPERS <- df_n_servRet_fillin 
+
+save(
+	df_n_servRet_fillin_MEPERS ,
+	file = paste0(dir_data, "Data_MEPERS_servRet_20200630_fillin.RData")
+)
+
 
 
 

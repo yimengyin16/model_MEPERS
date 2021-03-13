@@ -110,7 +110,7 @@
 
 
 
-## Assumptions on demographics
+## Assumptions on demographics (Legacy for CalPERS)
 # 
 # Regular t1 and regular t2 mebmers: to be modified
 #  Active members:
