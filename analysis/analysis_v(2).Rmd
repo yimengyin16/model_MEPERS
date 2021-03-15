@@ -1,5 +1,5 @@
 ---
-title: "Modeling MEPERS: preliminary results for discussion"
+title: "Modeling MEPERS: Preliminary results for discussion"
 output:
   html_notebook:
     toc: yes
@@ -15,39 +15,80 @@ editor_options:
 
 # **Overview of key risk-sharing features**
 
+Key policy features:
+
+1.  **ADC shared between employer and employees**. Normal costs and amortization costs for UAAL created after 7/1/2018 shall be paid through employer and employee contributions allocated **58% to the employer and 42% to the employee**.
+
+2.  **Contribution caps**. The employer and employee contribution rates are capped at 12.5% and 9%, respectively.
+
+3.  **Variable COLA**. If the ADC rates exceeds the caps (ADC rate \>= 21.5%), COLA will be reduced to maintain "cost-neutrality", but not below zero. If the reduction otherwise would have been below zero, then zero COLA will be applied and capped contributions will be paid in following years until "cost neutrality" is achieved.
+
+**Note**: "Cost neutrality" is the concept used in the official plan rules. For modeling purposes, our undertading is that cost neutrality is achieved when the ADC rate is equal to the actual total contribution rate. (caps not binding.)
+
 # **Summary of modeling approach**
 
-## Types of members
-
-
-
 ## Policy scenarios
+
+To examine the impact of the MEPERS risk-sharing features on plan costs, funded status, and member benefit, we run the simulation under the following three policy scenarios.
 
 1.  **Shared-ADC and variable COLA** (MEPERS policy)
 
     -   EEC = 48% \* ADC, capped at 9% of payroll
+    
     -   ERC = 52% \* ADC, capped at 12.5% of payroll
+    
     -   COLA: 0\~2.5% (cola assumption valuation: 1.91%)
 
 2.  **Shared ADC and fixed COLA**
 
-    -   COLA rate = 1.91%
+    -   The shared-ADC policy is the same as 1.
+    
+    -   COLA rate is fiexed at 1.91%.
 
 3.  **EEC as a fixed percentage of normal cost**
 
-    -   EEC = 48% of normal cost (about 6\~7% of payroll)
+    -   Only normal cost is shared. EEC = 48% of normal cost (about 6\~7% of payroll). Amortization costs are not shared with employees.
+    -   COLA rate is fiexed at 1.91%.
 
 **Note**: In 1 and 2, EEC rate can fall to as low as 0%. To make 3 comparable to 1 and 2, EEC are allowed to fall below 48% of NC if the total ADC rate is lower than 48% of NC due to negative amortization cost; EEC rate is still floored at 0%.
 
-Additional variants that we may explore:
+Additional variants will be examined in future analysis.
 
 ## Investment return scenarios
 
-1.  Deterministic: 7% investment return assumption achieved every year.
+1.  Stochastic: 7% expected mean return, 12% standard deviation. (to be replaced by scearnios and capital market assumptions provided by Pew)
 
-2.  Deterministic asset shock: This is based loosely on stress-test scenarios used by Pew, which in turn are based loosely on Dodd-Frank assumptions. We assume 7% return in 2018, 2% in 2019, negative 24% in 2020, then 3 years of 12% (2021-2023), then 7% annually thereafter.
+## Model assumptions and Simplifications
 
-3.  Stochastic: 7% expected mean return, 12% standard deviation: This allows us to see how the policies, particularly the contingent COLA policy, interact with investment return volatility. The tables below provide summary results for the deterministic scenarios. We will add tables for the stochastic return scenario in a later iteration.
+-   Benefit rules for Tier 1 Regular members are applied to all members. We will model three tiers in later versions: Tier 1 Regular (pre-2014 members), Tier 2 Regular (post-2014 members), and Speical. For
+
+-   Benefit rules for Tier 1 Regular members:
+
+    -   Normal retirement age: 60
+
+    -   benefit factor: 2% per year of service
+
+-   Key valuation methods and assumptions:
+
+    -   Discount rate: 6.75%
+
+    -   Cost method: EAN
+
+    -   Asset smoothing: 3 years
+
+    -   Amortization of UAAL: 20-year level-percent closed amortization
+
+## Questions about valuation with variable COLA 
+We need to better understand how the adjustable COLA is reflected in actuarial valuation calculations of liability in MEPERS. We are not sure what assumption they use about future COLAs when calculating the COLA reduction needed to bring the contribution rates under the caps. There are at least two possibilities:
+
+- Assume that the reduced COLA will be applied only in the next year, and then use the regular COLA assumptions (1.91%) for following years.
+
+- Assume that the reduced COLA will be applied for all following years (this is like what SDRS does).
+
+Also, we assume that the COLA reduction and suspension are only applied in the valuation of retiree liabilities, but not the active member liabilities. 
+
+
+
 
 # **Simulation results**
 
@@ -344,8 +385,8 @@ df_C_hike <-
 
 
 fig_title <- "Probability of ERC rate rising more than 10 percentage points \nwithin 5 years up to the given year"
-fig_C_hike <- 
-df_ERC_hike %>% 
+fig_ERC_hike <- 
+df_C_hike %>% 
 	filter(sim_name %in% names(runs_select)) %>% 
 	mutate(sim_name = factor(sim_name, levels = runs_select_df$sim_name, labels = runs_select_df$sim_label)) %>% 
 	ggplot(aes(x = year, y = ERC_hike, color = sim_name)) +  
@@ -563,7 +604,7 @@ fig_FR_full
 
 ## **Analysis of member benefit** {.tabset}
 
-Cohort to examined:
+Cohort examined:
 
 -   Joined the plan at age 25 in 1986\
 -   Start receiving benefit at age 60 in 2021
@@ -580,7 +621,7 @@ Cohort to examined:
 # load("Inputs/riskShaing_demographics_100y.RData")
 
 
-get_benefit <- function(df, start_year, span = 30){
+get_benefit <- function(df, year1, span = 30, ret_age = 60){
 
 # 
 # df <- results_all	
@@ -589,7 +630,7 @@ get_benefit <- function(df, start_year, span = 30){
 # ret_age <- 60
 
 if(span < 21) stop("span must be no less than 21")
-if(max(results_all$year) < start_year + span - 1) stop("Time span exceeds the max year in data.")
+if(max(results_all$year) < year1 + span - 1) stop("Time span exceeds the max year in data.")
 
 
 ## Create a model run with cola_actual = infl and append to results_all
@@ -677,7 +718,7 @@ list(
 }
 
 
-df_benefit_y30  <- get_benefit(results_all, start_year = 2021, span = 30)
+df_benefit_y30  <- get_benefit(results_all, year1 = 2021, span = 30, ret_age = 60)
 
 
 df_benefit_y30$benefit_qtile
