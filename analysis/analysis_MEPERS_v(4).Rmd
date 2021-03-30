@@ -434,7 +434,7 @@ df_C_hike %>%
 
 #### Risk of sharp ERC increase {.unnumbered}
 
-This graph shows the probability that the ERC rate will rise by more than 10 percentage points within any 5-year period leading up to the current year. For example, in 2035 it shows the probability that the ERC rose by 5 percentage points or more in any prior 5-year period (2020-2024, 2021-2025, ..., 2031-2035). This is designed to show whether the government was likely to face a sharp increase in contribution costs in a short period of time, during the period examined .
+This graph shows the probability that the ERC rate will rise by more than 10 percentage points within any 5-year period leading up to the current year. For example, in 2035 it shows the probability that the ERC rose by 10 percentage points or more in any prior 5-year period (2020-2024, 2021-2025, ..., 2031-2035). This is designed to show whether the government was likely to face a sharp increase in contribution costs in a short period of time, during the period examined .
 
 ```{r echo=FALSE}
 fig_ERC_hike
