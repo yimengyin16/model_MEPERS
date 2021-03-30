@@ -235,7 +235,7 @@ get_PVC_qtiles <- function(df_PVC){
 df_PVC_qtiles_30y <- get_PVC_qtiles(df_PVC_30y)
 
 ## show results
-# df_PVC_qtiles_30y
+ df_PVC_qtiles_30y
 
 
 run_base <- "regularAll_sharedADC_vCola"
