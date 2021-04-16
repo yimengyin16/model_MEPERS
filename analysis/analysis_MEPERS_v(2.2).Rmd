@@ -1,0 +1,1246 @@
+---
+title: "Modeling MEPERS: Preliminary results for discussion"
+output:
+  html_notebook:
+    toc: yes
+    number_sections: yes
+  word_document:
+    toc: yes
+  html_document:
+    toc: yes
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+# **Overview of key risk-sharing features**
+
+Key policy features:
+
+1.  **ADC shared between employer and employees**. Normal costs and amortization costs for UAAL created after 7/1/2018 shall be paid through employer and employee contributions allocated **58% to the employer and 42% to the employee**.
+
+2.  **Contribution caps**. The employer and employee contribution rates are capped at 12.5% and 9%, respectively.
+
+3.  **Variable COLA**. If the combined employer-employee ADC rates exceed the cap (ADC rate \>= 21.5%), COLA will be reduced to maintain "cost-neutrality", but not below zero. If the reduction otherwise would have been below zero, then zero COLA will be applied and capped contributions will be paid in following years until "cost neutrality" is achieved achieved (i.e., until the ADC falls to or below the cap).
+
+
+# **Summary of modeling approach**
+
+## Policy scenarios
+
+To examine the impact of the MEPERS risk-sharing features on plan costs, funded status, and member benefit, we run the simulation under the following three policy scenarios.
+
+1.  **Shared-ADC and variable COLA** (MEPERS policy)
+
+    -   EEC = 48% \* ADC, capped at 9% of payroll
+    
+    -   ERC = 52% \* ADC, capped at 12.5% of payroll
+    
+    -   COLA: 0\~2.5% (cola assumption valuation: 1.91%)
+
+2.  **Shared ADC and fixed COLA**
+
+    -   The shared-ADC policy is the same as 1.
+    
+    -   COLA rate is fiexed at 1.91%.
+
+3.  **EEC as a fixed percentage of normal cost**
+
+    -   Only normal cost is shared. EEC = 48% of normal cost (about 6\~7% of payroll). Amortization costs are not shared with employees.
+    -   COLA rate is fiexed at 1.91%.
+
+**Note**: In 1 and 2, EEC rate can fall to as low as 0%. To make 3 comparable to 1 and 2, EEC are allowed to fall below 48% of NC if the total ADC rate is lower than 48% of NC due to negative amortization cost; EEC rate is still floored at 0%.
+
+Additional variants will be examined in future analysis.
+
+## Investment return scenarios
+
+1.  Stochastic: 6.75% expected mean return, 12% standard deviation. This is just for purposes of initial analysis. Will be replaced by scenarios and capital market assumptions provided by Pew. 
+
+## Model assumptions and Simplifications
+
+-   Benefit rules for Tier 1 Regular members are applied to all members. We will model three tiers in later versions: Tier 1 Regular (pre-2014 members), Tier 2 Regular (post-2014 members), and Special. 
+
+-   Benefit rules for Tier 1 Regular members:
+
+    -   Normal retirement age: 60
+
+    -   Benefit factor: 2% per year of service
+
+-   Key valuation methods and assumptions:
+
+    -   Discount rate: 6.75%
+
+    -   Cost method: EAN
+
+    -   Asset smoothing: 3 years
+
+    -   Amortization of UAAL: 20-year level-percent closed amortization
+
+## Questions about valuation with variable COLA 
+We need to better understand how the adjustable COLA is reflected in actuarial valuation calculations of liability in MEPERS. We are not sure what assumption they use about future COLAs when calculating the COLA reduction needed to bring the contribution rates under the caps. There are at least two possibilities:
+
+- Assume that the reduced COLA will be applied only in the next year, and then use the regular COLA assumptions (1.91%) for following years.
+
+- Assume that the reduced COLA will be applied for all following years (this is like what SDRS does).
+
+Also, we assume that the COLA reduction and suspension are only applied in the valuation of retiree liabilities, but not the active member liabilities. 
+
+
+
+
+# **Simulation results**
+
+```{r Global_settings, include=FALSE}
+
+## Loading packages
+source(here::here("libraries.R"))
+
+theme_set(theme_yy())
+
+dir_modelResults <- paste0(here::here(),"/model/simulation/Outputs_sim/")
+dir_outputs      <- paste0(here::here(),"/analysis/outputs_analysis/") 
+
+
+# # Global parameters for analysis
+dr   <- 0.0675 # discount rate
+infl <- 0.0275
+
+
+```
+
+```{r Loading_results, include = FALSE}
+
+source(here::here("/analysis/analysis_loadingResults.R"))
+# Outputs: 
+   # results_all
+
+
+runs_select <- c(
+    regularAll_sharedADC_vCola     = "Shared ADC; caps; \nVariable COLA (MEPERS)",
+		regularAll_sharedADC_fixedCola = "Shared ADC; caps; \nFixed COLA",
+		regularAll_sharedNC_fixedCola  = "Shared NC; no caps; \nFixed COLA"
+)
+
+
+runs_select_df <- 
+	tibble(
+		sim_name  = names(runs_select),
+		sim_label = runs_select 
+	)
+
+
+results_all %<>% 
+	filter(sim_name %in% names(runs_select)) %>% 
+	mutate(sim_name = factor(sim_name, levels = names(runs_select)))
+
+
+# label_ptiles <- 
+# 	list(
+# 		q90 = "90th",
+# 		q75 = 
+# 		
+# 	)
+
+
+# results_all %>% 
+# 	filter(sim_name == names(runs_select)[1], sim == 1 ) %>% 
+# 	select(sim_name, year, ERC)
+# 
+# results_all %>% 
+# 	filter(sim_name == names(runs_select)[2], sim == 1 ) %>% 
+# 	select(sim_name, year, ERC)
+
+
+
+```
+
+## Summary of investment return scenarios
+
+Please note that investment return percentile points won’t correspond exactly with percentile points for employer contributions or other concepts. For example, the 10th percentile for the long-run investment return won’t occur at the same simulation as the 10th percentile for the PV of employer contributions.
+
+
+```{r warning=FALSE, include=FALSE}
+
+get_returntbl <- function(df, year_range){
+
+ # df <- results_all
+ # year_range <- 2020:2049
+
+df_returnScn <- 
+df %>% 
+	filter(year %in% year_range, sim_name == sim_name[1], sim > 0) %>% 
+	select(sim_name, sim, year, i.r) %>% 
+	group_by(sim_name, sim) %>% 
+	summarise(geoReturn = get_geoReturn(i.r), .groups = "drop") %>% 
+	summarise(r_p90 = quantile(geoReturn, 0.90),
+						r_p75 = quantile(geoReturn, 0.75),
+						r_p50 = quantile(geoReturn, 0.50),
+						r_p25 = quantile(geoReturn, 0.25),
+						r_p10 = quantile(geoReturn, 0.1),
+						.groups = "drop") %>% 
+	gather(Var, value) %>% 
+	mutate(Var   = paste0(str_extract(Var, "\\d+"), "th") ,
+				 Var   = factor(Var) %>% fct_inorder(),
+				 ) %>% 
+	spread(Var, value) %>% 
+	gt %>% 
+	fmt_percent(
+		columns = everything(),
+		# contains("th"),
+		decimals = 1) %>% 
+	tab_header(
+		title = html("Distribution of 30-year compound annual returns"),
+	  subtitle = html('2021-2050; percentiles of 1,000 runs')
+	)
+}	
+
+tbl_returns <- get_returntbl(results_all, 2021:2050) 
+
+```
+
+
+
+
+```{r echo=FALSE}
+tbl_returns
+
+```
+
+
+
+## Analysis of contributions
+
+### Distribution of long-term costs {.tabset}
+
+(Click tabs below to show tables)
+
+```{r pvCosts, warning=FALSE, include=FALSE}
+
+## PV ERC and EEC 
+get_PVC <- function(df, span, dr){
+
+  df %>% 
+	filter(year <= span + 2020) %>% 
+	select(sim_name, sim, year, ERC, EEC, UAAL, AL, PR) %>% 
+	group_by(sim_name, sim) %>% 
+	mutate(year = year - 2020 + 1) %>% 
+	summarise(
+		        sim_name = unique(sim_name),
+						
+            # PV of payroll
+		        PR_PV         = sum(PR / (1 + dr)^(year - 1)),
+		        
+		        # PV of ERC
+		        ERC_PV         = sum(ERC / (1 + dr)^(year - 1)),
+						ERCwUAAL_PV    = sum(ERC / (1 + dr)^(year - 1)) +  UAAL[year == max(year)] / (1 + unique(dr))^(max(year) - 1),
+						
+						ERC_PR = ERC_PV / PR_PV,
+						ERCwUAAL_PR = ERCwUAAL_PV /PR_PV,
+						
+
+						# PV of EEC
+						EEC_PV    = sum(EEC / (1 + dr)^(year - 1)),
+					  EEC_PR    = EEC_PV / PR_PV,
+						
+						# PV of total contribution plus terminal UAAL
+						CwUAAL_PV = sum( (ERC+EEC) / (1 + dr)^(year - 1))  +  UAAL[year == max(year)] / (1 + unique(dr))^(max(year) - 1),
+						CwUAAL_PR = CwUAAL_PV / PR_PV,
+						
+						# terminal UAAL
+						UAAL_PV  = UAAL[year == max(year)] / (1 + unique(dr))^(max(year) - 1),
+						UAAL_PR  = UAAL_PV / PR_PV,
+						
+					  # terminal UAAL as terminal AL
+					  UAAL_AL_terminal    = 100 * UAAL[year == max(year)] / AL[year == max(year)],
+						
+						.groups = "drop"
+						)
+}
+
+df_PVC_30y <- get_PVC(results_all, 30, dr = 0.0675)
+
+
+
+## Percentiles of PVC for each policy
+get_PVC_qtiles <- function(df_PVC){
+
+# df_PVC_qtiles <- 
+	df_PVC %>% 
+	filter(sim >= 1) %>% 
+	group_by(sim_name) %>% 
+	summarise(sim_name = unique(sim_name),
+						
+					 #CwUAAL_PV_q99 = quantile(CwUAAL_PV, 0.99, na.rm = TRUE),
+						CwUAAL_PV_q90 = quantile(CwUAAL_PV, 0.90, na.rm = TRUE),
+						CwUAAL_PV_q75 = quantile(CwUAAL_PV, 0.75, na.rm = TRUE),
+						CwUAAL_PV_q50 = quantile(CwUAAL_PV, 0.50, na.rm = TRUE),
+						CwUAAL_PV_q25 = quantile(CwUAAL_PV, 0.25, na.rm = TRUE),
+						CwUAAL_PV_q10 = quantile(CwUAAL_PV, 0.1,  na.rm = TRUE),
+						
+			
+						#ERC_PV_q99 = quantile(ERC_PV, 0.99),
+						ERC_PV_q90 = quantile(ERC_PV, 0.90),
+						ERC_PV_q75 = quantile(ERC_PV, 0.75),
+						ERC_PV_q50 = quantile(ERC_PV, 0.50),
+						ERC_PV_q25 = quantile(ERC_PV, 0.25),
+						ERC_PV_q10 = quantile(ERC_PV, 0.1),
+					
+						#EEC_PV_q99 = quantile(EEC_PV, 0.99),
+						EEC_PV_q90 = quantile(EEC_PV, 0.90),
+						EEC_PV_q75 = quantile(EEC_PV, 0.75),
+						EEC_PV_q50 = quantile(EEC_PV, 0.50),
+						EEC_PV_q25 = quantile(EEC_PV, 0.25),
+						EEC_PV_q10 = quantile(EEC_PV, 0.1),
+						
+					
+						#UAAL_PV_q99 = quantile(UAAL_PV, 0.90, na.rm = TRUE),
+						UAAL_PV_q90 = quantile(UAAL_PV, 0.90, na.rm = TRUE),
+						UAAL_PV_q75 = quantile(UAAL_PV, 0.75, na.rm = TRUE),
+						UAAL_PV_q50 = quantile(UAAL_PV, 0.50, na.rm = TRUE),
+						UAAL_PV_q25 = quantile(UAAL_PV, 0.25, na.rm = TRUE),
+						UAAL_PV_q10 = quantile(UAAL_PV, 0.1,  na.rm = TRUE),
+						
+						#UAAL_AL_q99 = quantile(UAAL_AL_terminal, 0.99, na.rm = TRUE),
+						UAAL_AL_q90 = quantile(UAAL_AL_terminal, 0.90, na.rm = TRUE),
+						UAAL_AL_q75 = quantile(UAAL_AL_terminal, 0.75, na.rm = TRUE),
+						UAAL_AL_q50 = quantile(UAAL_AL_terminal, 0.50, na.rm = TRUE),
+						UAAL_AL_q25 = quantile(UAAL_AL_terminal, 0.25, na.rm = TRUE),
+						UAAL_AL_q10 = quantile(UAAL_AL_terminal, 0.1,  na.rm = TRUE),
+						.groups = "drop"
+						)
+}
+
+df_PVC_qtiles_30y <- get_PVC_qtiles(df_PVC_30y)
+
+## show results
+ df_PVC_qtiles_30y
+
+
+ 
+get_PVC_qtiles_v2 <- function(df_PVC, ptiles){
+	# Select simulation runs based on the percentile of CwUAAL_PV
+	
+  # var_base = "CwUAAL_PV"	
+  # ptiles <- c(0.99, 0.9, 0.75, 0.5, 0.25, 0.1)
+  
+	df_PVC <- df_PVC_30y
+	df_PVC %>% 
+		filter(sim > 0) %>% 
+		group_by(sim_name) %>% 
+	  arrange(sim_name, CwUAAL_PV) %>% 
+		mutate(sim_order = 1:n(),
+					 sim_tot   = n()) %>% 
+		filter(sim_order %in% round(ptiles * n())) %>% 
+		arrange(sim_name, desc(sim_order)) %>% 
+    gather(Var, value, -sim_name, -sim_order, -sim, -sim_tot) %>% 
+		mutate(Var = paste0(Var,"_p", 100* sim_order/sim_tot)) %>% 
+		select(-sim, -sim_tot, -sim_order) %>% 
+		spread(Var, value) %>% 
+		ungroup
+}
+
+
+ptiles <- c(0.9, 0.75, 0.5, 0.25, 0.1)
+df_PVC_qtiles.v2_30y <- get_PVC_qtiles_v2(df_PVC_30y, ptiles)
+
+ 
+ 
+run_base <- "regularAll_sharedADC_vCola"
+
+scale_C.v1 <- 
+  df_PVC_qtiles_30y %>% 
+	filter(sim_name == run_base) %>% 
+	pull(CwUAAL_PV_q50)
+
+
+scale_C.v2 <- 
+  df_PVC_qtiles.v2_30y %>% 
+	filter(sim_name == run_base) %>% 
+	pull(CwUAAL_PV_p50)
+
+
+
+
+## Table of distribution of PV total contribution with terminal UAAL
+
+tbl_pvCwUAAL.v1 <- 
+  df_PVC_qtiles_30y %>% 
+	select(sim_name, starts_with("CwUAAL_PV")) %>% 
+	gather(Var, value, -sim_name) %>% 
+	mutate(value = 100 * value / scale_C.v1,
+				 Var   = paste0(str_extract(Var, "\\d+"), "th") ,
+				 Var   = factor(Var) %>% fct_inorder()
+				 ) %>% 
+	spread(Var, value) %>% 
+	left_join(runs_select_df, by = "sim_name") %>% 
+	select(sim_label, everything(), -sim_name) %>% 
+	ungroup() %>% 
+	gt %>% 
+	cols_label(sim_label = "Policy") %>% 
+	fmt_number(
+		contains("th"),
+		decimals = 1) %>% 
+	tab_header(
+		title = html("Distribution of 30-year present value of total contribution plus terminal UAAL")
+	)
+
+
+tbl_pvCwUAAL.v2 <- 
+  df_PVC_qtiles.v2_30y %>% 
+	ungroup() %>% 
+	select(sim_name, starts_with("CwUAAL_PV")) %>% 
+	gather(Var, value, -sim_name) %>% 
+	mutate(value = 100 * value / scale_C.v2,
+				 Var   = paste0(str_extract(Var, "\\d+"), "th") ,
+				 Var   = factor(Var) %>% fct_inorder(),
+				 Var   = factor(Var, levels = rev(levels(Var)))
+				 ) %>% 
+	spread(Var, value) %>% 
+	left_join(runs_select_df, by = "sim_name") %>% 
+	select(sim_label, everything(), -sim_name) %>% 
+
+	gt %>% 
+	cols_label(sim_label = "Policy") %>% 
+	fmt_number(
+		contains("th"),
+		decimals = 1) %>% 
+	tab_header(
+		title = html("Distribution of 30-year present value of total contribution plus terminal UAAL")
+	)
+
+
+## Table of distribution of PV ERC
+tbl_pvERC.v1 <- 
+  df_PVC_qtiles_30y %>% 
+	select(sim_name, starts_with("ERC_PV")) %>% 
+	gather(Var, value, -sim_name) %>% 
+	mutate(value = 100 * value / scale_C.v1,
+				 Var   = paste0(str_extract(Var, "\\d+"), "th") ,
+				 Var   = factor(Var) %>% fct_inorder()
+				 ) %>% 
+	spread(Var, value) %>% 
+	left_join(runs_select_df, by = "sim_name") %>% 
+	select(sim_label, everything(), -sim_name) %>% 
+	gt %>% 
+	cols_label(sim_label = "Policy") %>% 
+	fmt_number(
+		contains("th"),
+		decimals = 1) %>% 
+	tab_header(
+		title = html("Distribution of 30-year present value of ERC")
+	)
+
+tbl_pvERC.v2 <- 
+  df_PVC_qtiles.v2_30y %>% 
+	select(sim_name, starts_with("ERC_PV")) %>% 
+	gather(Var, value, -sim_name) %>% 
+	mutate(value = 100 * value / scale_C.v2,
+				 Var   = paste0(str_extract(Var, "\\d+"), "th") ,
+				 Var   = factor(Var) %>% fct_inorder(),
+				 Var   = factor(Var, levels = rev(levels(Var)))
+				 ) %>% 
+	spread(Var, value) %>% 
+	left_join(runs_select_df, by = "sim_name") %>% 
+	select(sim_label, everything(), -sim_name) %>% 
+	gt %>% 
+	cols_label(sim_label = "Policy") %>% 
+	fmt_number(
+		contains("th"),
+		decimals = 1) %>% 
+	tab_header(
+		title = html("Distribution of 30-year present value of ERC")
+	)
+
+
+
+## Table of distribution of PV EEC
+tbl_pvEEC.v1 <- 
+  df_PVC_qtiles_30y %>% 
+	select(sim_name, starts_with("EEC_PV")) %>% 
+	gather(Var, value, -sim_name) %>% 
+	mutate(value = 100 * value / scale_C.v1,
+				 Var   = paste0(str_extract(Var, "\\d+"), "th") ,
+				 Var   = factor(Var) %>% fct_inorder()
+				 ) %>% 
+	spread(Var, value) %>% 
+	left_join(runs_select_df, by = "sim_name") %>% 
+	select(sim_label, everything(), -sim_name) %>% 
+	gt %>% 
+	cols_label(sim_label = "Policy") %>% 
+	fmt_number(
+		contains("th"),
+		decimals = 1) %>% 
+	tab_header(
+		title = html("Distribution of 30-year present value of EEC")
+	)
+
+tbl_pvEEC.v2 <- 
+  df_PVC_qtiles.v2_30y %>% 
+	select(sim_name, starts_with("EEC_PV")) %>% 
+	gather(Var, value, -sim_name) %>% 
+	mutate(value = 100 * value / scale_C.v2,
+				 Var   = paste0(str_extract(Var, "\\d+"), "th") ,
+				 Var   = factor(Var) %>% fct_inorder(),
+				 Var   = factor(Var, levels = rev(levels(Var)))
+				 ) %>% 
+	spread(Var, value) %>% 
+	left_join(runs_select_df, by = "sim_name") %>% 
+	select(sim_label, everything(), -sim_name) %>% 
+	gt %>% 
+	cols_label(sim_label = "Policy") %>% 
+	fmt_number(
+		contains("th"),
+		decimals = 1) %>% 
+	tab_header(
+		title = html("Distribution of 30-year present value of EEC")
+	)
+
+
+
+## Table of distribution of terminal UAAL
+tbl_pvUAAL.v1 <-   
+  df_PVC_qtiles_30y %>% 
+	select(sim_name, starts_with("UAAL_PV")) %>% 
+	gather(Var, value, -sim_name) %>% 
+	mutate(
+		     value = 100 * value / scale_C.v1,
+		     #value = value/1e6,
+				 Var   = paste0(str_extract(Var, "\\d+"), "th") ,
+				 Var   = factor(Var) %>% fct_inorder()
+				 ) %>% 
+	spread(Var, value) %>% 
+	left_join(runs_select_df, by = "sim_name") %>% 
+	select(sim_label, everything(), -sim_name) %>% 
+	gt %>% 
+	cols_label(sim_label = "Policy") %>% 
+	fmt_number(
+		contains("th"),
+		decimals = 1) %>% 
+	tab_header(
+		title = html("Distribution of present value of terminal UAAL (year 30)")
+		# subtitle = "$million"
+	) %>% 
+	tab_source_note(
+		source_note = "Note: negative values are surplus"
+	)
+
+tbl_pvUAAL.v2 <-   
+  df_PVC_qtiles.v2_30y %>% 
+	select(sim_name, starts_with("UAAL_PV")) %>% 
+	gather(Var, value, -sim_name) %>% 
+	mutate(
+		     value = 100 * value / scale_C.v2,
+		     #value = value/1e6,
+				 Var   = paste0(str_extract(Var, "\\d+"), "th") ,
+				 Var   = factor(Var) %>% fct_inorder(),
+				 	 Var   = factor(Var, levels = rev(levels(Var)))
+				 ) %>% 
+	spread(Var, value) %>% 
+	left_join(runs_select_df, by = "sim_name") %>% 
+	select(sim_label, everything(), -sim_name) %>% 
+	gt %>% 
+	cols_label(sim_label = "Policy") %>% 
+	fmt_number(
+		contains("th"),
+		decimals = 1) %>% 
+	tab_header(
+		title = html("Distribution of present value of terminal UAAL (year 30)")
+		# subtitle = "$million"
+	) %>% 
+	tab_source_note(
+		source_note = "Note: negative values are surplus"
+	)
+
+
+
+## Table of distribution of terminal UAAL as a % of AL
+tbl_UAAL_AL.v1 <-   
+  df_PVC_qtiles_30y %>% 
+	select(sim_name, starts_with("UAAL_AL")) %>% 
+	gather(Var, value, -sim_name) %>% 
+	mutate(
+		     #value = 100 * value / value[sim_name == run_base& str_detect(Var, "q50")],
+		     # value = value/1e6,
+				 Var   = paste0(str_extract(Var, "\\d+"), "th") ,
+				 Var   = factor(Var) %>% fct_inorder()
+				 ) %>% 
+	spread(Var, value) %>% 
+	left_join(runs_select_df, by = "sim_name") %>% 
+	select(sim_label, everything(), -sim_name) %>% 
+	gt %>% 
+	cols_label(sim_label = "Policy") %>% 
+	fmt_number(
+		contains("th"),
+		decimals = 1) %>% 
+	tab_header(
+		title = html("Distribution of terminal UAAL (year 30)"),
+		subtitle = "% of terminal AL"
+	) 
+
+
+tbl_UAAL_AL.v2 <-   
+  df_PVC_qtiles.v2_30y %>% 
+	select(sim_name, starts_with("UAAL_AL")) %>% 
+	gather(Var, value, -sim_name) %>% 
+	mutate(
+		     #value = 100 * value / value[sim_name == run_base& str_detect(Var, "q50")],
+		     # value = value/1e6,
+				 Var   = paste0(str_extract(Var, "\\d+"), "th") ,
+				 Var   = factor(Var) %>% fct_inorder(),
+				 	 Var   = factor(Var, levels = rev(levels(Var)))
+				 ) %>% 
+	spread(Var, value) %>% 
+	left_join(runs_select_df, by = "sim_name") %>% 
+	select(sim_label, everything(), -sim_name) %>% 
+	gt %>% 
+	cols_label(sim_label = "Policy") %>% 
+	fmt_number(
+		contains("th"),
+		decimals = 1) %>% 
+	tab_header(
+		title = html("Distribution of terminal UAAL (year 30)"),
+		subtitle = "% of terminal AL"
+	) 
+
+
+{
+# ## Table of distribution of PV total contribution with terminal UAAL
+# 
+# tbl_pvCwUAAL <- 
+#   df_PVC_qtiles_30y %>% 
+# 	select(sim_name, starts_with("CwUAAL_PV")) %>% 
+# 	gather(Var, value, -sim_name) %>% 
+# 	mutate(value = 100 * value / value[sim_name == run_base& str_detect(Var, "q50")],
+# 				 Var   = paste0(str_extract(Var, "\\d+"), "th") ,
+# 				 Var   = factor(Var) %>% fct_inorder()
+# 				 ) %>% 
+# 	spread(Var, value) %>% 
+# 	left_join(runs_select_df, by = "sim_name") %>% 
+# 	select(sim_label, everything(), -sim_name) %>% 
+# 	gt %>% 
+# 	cols_label(sim_label = "Policy") %>% 
+# 	fmt_number(
+# 		contains("th"),
+# 		decimals = 1) %>% 
+# 	tab_header(
+# 		title = html("Distribution of 30-year present value of total contribution plus terminal UAAL")
+# 	)
+# 
+# 
+# ## Table of distribution of PV ERC
+# tbl_pvERC <- 
+#   df_PVC_qtiles_30y %>% 
+# 	select(sim_name, starts_with("ERC_PV")) %>% 
+# 	gather(Var, value, -sim_name) %>% 
+# 	mutate(value = 100 * value / value[sim_name == run_base& str_detect(Var, "q50")],
+# 				 Var   = paste0(str_extract(Var, "\\d+"), "th") ,
+# 				 Var   = factor(Var) %>% fct_inorder()
+# 				 ) %>% 
+# 	spread(Var, value) %>% 
+# 	left_join(runs_select_df, by = "sim_name") %>% 
+# 	select(sim_label, everything(), -sim_name) %>% 
+# 	gt %>% 
+# 	cols_label(sim_label = "Policy") %>% 
+# 	fmt_number(
+# 		contains("th"),
+# 		decimals = 1) %>% 
+# 	tab_header(
+# 		title = html("Distribution of 30-year present value of ERC")
+# 	)
+# 
+# 
+# ## Table of distribution of PV EEC
+# tbl_pvEEC <- 
+#   df_PVC_qtiles_30y %>% 
+# 	select(sim_name, starts_with("EEC_PV")) %>% 
+# 	gather(Var, value, -sim_name) %>% 
+# 	mutate(value = 100 * value / value[sim_name == run_base& str_detect(Var, "q50")],
+# 				 Var   = paste0(str_extract(Var, "\\d+"), "th") ,
+# 				 Var   = factor(Var) %>% fct_inorder()
+# 				 ) %>% 
+# 	spread(Var, value) %>% 
+# 	left_join(runs_select_df, by = "sim_name") %>% 
+# 	select(sim_label, everything(), -sim_name) %>% 
+# 	gt %>% 
+# 	cols_label(sim_label = "Policy") %>% 
+# 	fmt_number(
+# 		contains("th"),
+# 		decimals = 1) %>% 
+# 	tab_header(
+# 		title = html("Distribution of 30-year present value of EEC")
+# 	)
+# 
+# 
+# ## Table of distribution of terminal UAAL
+# tbl_pvUAAL <-   
+#   df_PVC_qtiles_30y %>% 
+# 	select(sim_name, starts_with("UAAL_PV")) %>% 
+# 	gather(Var, value, -sim_name) %>% 
+# 	mutate(
+# 		     #value = 100 * value / value[sim_name == run_base& str_detect(Var, "q50")],
+# 		     value = value/1e6,
+# 				 Var   = paste0(str_extract(Var, "\\d+"), "th") ,
+# 				 Var   = factor(Var) %>% fct_inorder()
+# 				 ) %>% 
+# 	spread(Var, value) %>% 
+# 	left_join(runs_select_df, by = "sim_name") %>% 
+# 	select(sim_label, everything(), -sim_name) %>% 
+# 	gt %>% 
+# 	cols_label(sim_label = "Policy") %>% 
+# 	fmt_number(
+# 		contains("th"),
+# 		decimals = 0) %>% 
+# 	tab_header(
+# 		title = html("Distribution of present value of terminal UAAL (year 30)"),
+# 		subtitle = "$million"
+# 	) %>% 
+# 	tab_source_note(
+# 		source_note = "Note: negative values are surplus"
+# 	)
+}
+# tbl_pvCwUAAL
+# tbl_pvERC
+# tbl_pvEEC
+# tbl_pvUAAL
+
+```
+
+
+### Distribution of long-term costs (Cost components add up) {.tabset}
+
+Making the cost components add up to the PV of total contribution with terminal UAAL:
+
+- Values in all tables (except the two "as % of AL" tables) are scaled using the 50th percentile value under the "Hybrid; 1% DB factor; Cost control" policy, which is set to 100. 
+
+- To make cost components add up, we also need to make sure that for each policy-percentile combination, the values across all component tables are from the same single simulation trial. For each policy, the simulation trials are selected based on percentiles of "PV of total contribution plus terminal UAAL". Thus, the percentiles in the cost component tables (2 - 4) refer to the percentiles of "PV of total contribution plus UAAL", not the percentiles of the component variables themselves. 
+
+
+(Click tabs below to show tables)
+
+#### PV of total contribution with terminal UAAL {.unnumbered}
+
+```{r echo=FALSE}
+tbl_pvCwUAAL.v2 %>% tab_options(table.width = px(700)) 
+```
+
+#### PV of employer contribution {.unnumbered}
+
+```{r echo=FALSE}
+tbl_pvERC.v2 %>% tab_options(table.width = px(700)) 
+```
+
+#### PV of employee contribution {.unnumbered}
+
+```{r echo=FALSE}
+tbl_pvEEC.v2 %>% tab_options(table.width = px(700)) 
+```
+
+#### PV of terminal UAAL {.unnumbered}
+
+```{r echo=FALSE}
+tbl_pvUAAL.v2 %>% tab_options(table.width = px(700)) 
+```
+
+#### Terminal UAAL as % of AL {.unnumbered}
+```{r echo=FALSE}
+tbl_UAAL_AL.v2
+```
+
+
+### Distribution of long-term costs (Cost components DO NOT add up) {.tabset}
+
+Values in all tables (except the two "as % of AL" tables) are scaled using the 50th percentile value under the "Hybrid; 1% DB factor; Cost control" policy, which is set to 
+100. 
+
+But the cost components do not add up to the "pv of total contribution plus terminal UAAL" because in each table the percentiles are calculated based on the variable in that table. So for each policy-percentile combination, the values across the component tables may come from different simulation trials. 
+
+
+(Click tabs below to show tables)
+
+#### PV of total contribution with terminal UAAL {.unnumbered}
+
+```{r echo=FALSE}
+tbl_pvCwUAAL.v1 %>% tab_options(table.width = px(700)) 
+```
+
+#### PV of employer contribution {.unnumbered}
+
+```{r echo=FALSE}
+tbl_pvERC.v1 %>% tab_options(table.width = px(700)) 
+```
+
+#### PV of employee contribution {.unnumbered}
+
+```{r echo=FALSE}
+tbl_pvEEC.v1 %>% tab_options(table.width = px(700)) 
+```
+
+#### PV of terminal UAAL {.unnumbered}
+
+```{r echo=FALSE}
+tbl_pvUAAL.v1 %>% tab_options(table.width = px(700)) 
+```
+
+#### Terminal UAAL as % of AL {.unnumbered}
+```{r echo=FALSE}
+tbl_UAAL_AL.v1
+```
+
+
+
+
+
+### Short-term volatility of costs {.tabset}
+
+```{r prob_ERChike, echo = FALSE}
+
+ylim_section <- c(0, 1)
+ybreaks <- seq(0, 1, 0.1)
+
+df_C_hike <-  
+  results_all %>% 
+	as_tibble() %>% 
+	filter(sim >= 1, year <=2050) %>% 
+	select(sim_name, sim, year, ERC_PR, EEC_PR) %>% 
+	group_by(sim_name, sim) %>% 
+	mutate(ERC_hike = cumany( ERC_PR - lag(ERC_PR, 5, Inf) > 10),
+				 EEC_hike = cumany( EEC_PR - lag(EEC_PR, 5, Inf) > 5)) %>% 
+	group_by(sim_name, year) %>% 
+	summarise(ERC_hike = sum(ERC_hike)/n(),
+						EEC_hike = sum(EEC_hike)/n(),
+						.groups = "drop")
+
+
+fig_title <- "Probability of ERC rate rising more than 10 percentage points \nwithin 5 years up to the given year"
+fig_ERC_hike <- 
+df_C_hike %>% 
+	filter(sim_name %in% names(runs_select)) %>% 
+	mutate(sim_name = factor(sim_name, levels = runs_select_df$sim_name, labels = runs_select_df$sim_label)) %>% 
+	ggplot(aes(x = year, y = ERC_hike, color = sim_name)) +  
+	geom_line() +
+	geom_point() + 
+	coord_cartesian(ylim = ylim_section) +
+	scale_color_manual(values = c(brewer_pal(type = "qual", palette = 3 )(7)) ) + 
+	scale_y_continuous(breaks = ybreaks, labels = function(x) percent(x, accuracy = 1)) +
+	scale_x_continuous(breaks = seq(2020, 2100, 5)) +
+	labs(title = fig_title,
+			 x = "Year",
+			 y = "Probability",
+			 color = "Policy"
+			 ) + 
+	guides(color = guide_legend(keywidth = 1.5, keyheight = 2.5)
+				 #shape = guide_legend(keywidth = 1.5, keyheight = 2.5)
+				 )
+
+
+fig_title <- "Probability of EEC rate rising more than 5 percentage points \nwithin 5 years up to the given year"
+fig_EEC_hike <- 
+df_C_hike %>% 
+	filter(sim_name %in% names(runs_select)) %>% 
+	mutate(sim_name = factor(sim_name, levels = runs_select_df$sim_name, labels = runs_select_df$sim_label)) %>% 
+	ggplot(aes(x = year, y = EEC_hike, color = sim_name)) +  
+	geom_line() +
+	geom_point() + 
+	coord_cartesian(ylim = ylim_section) +
+	scale_color_manual(values = c(brewer_pal(type = "qual", palette = 3 )(7)) ) + 
+	scale_y_continuous(breaks = ybreaks, labels = function(x) percent(x, accuracy = 1)) +
+	scale_x_continuous(breaks = seq(2020, 2100, 5)) +
+	labs(title = fig_title,
+			 x = "Year",
+			 y = "Probability",
+			 color = "Policy"
+			 ) + 
+	guides(color = guide_legend(keywidth = 1.5, keyheight = 2.5)
+				 #shape = guide_legend(keywidth = 1.5, keyheight = 2.5)
+				 )
+
+
+# fig_ERC_hike
+# 
+# fig_EEC_hike
+# 	
+# gridExtra::grid.arrange(fig_ERC_hike, fig_EEC_hike, ncol = 2)
+```
+
+#### Risk of sharp ERC increase {.unnumbered}
+
+This graph shows the probability that the ERC rate will rise by more than 10 percentage points within any 5-year period leading up to the current year. For example, in 2035 it shows the probability that the ERC rose by 10 percentage points or more in any prior 5-year period (2020-2024, 2021-2025, ..., 2031-2035). This is designed to show whether the government was likely to face a sharp increase in contribution costs in a short period of time, during the period examined .
+
+```{r echo=FALSE}
+fig_ERC_hike
+```
+
+#### Risk of sharp EEC increase {.unnumbered}
+
+This graph shows the probability that the EEC rate will rise by more than 5 percentage points within any 5-year period leading up to the current year. For example, in 2035 it shows the probability that the EEC rose by 5 percentage points or more in any prior 5-year period (2020-2024, 2021-2025, …, 2031-2035). This is designed to show whether the plan member was likely to face a sharp increase in contribution costs in a short period of time, during the period examined . Note that we use a 5 percentage point change for the EEC and a 10 percentage point change for the ERC, on the belief that individuals may consider a smaller sharp change to their take home pay to be quite significant.
+
+```{r echo=FALSE}
+fig_EEC_hike
+```
+
+## **Analysis of funded status** {.tabset}
+
+-   Chance that funded ratio will fall below 90%
+-   Chance that funded ratio will fall below 60%
+-   Chance of the plan being at least 100% funded in the given year
+
+
+```{r FR, echo = FALSE}
+
+ylim_section <- c(0, 1)
+ybreaks <- seq(0, 1, 0.1)
+
+df_FR <-  
+  results_all %>% 
+	as_tibble() %>% 
+	filter(sim >= 1, year <=2050) %>% 
+	select(sim_name, sim, year, FR_MA, C, NC, B, PR) %>%
+	mutate(CFnet1_PR = (C - B)/PR,
+				 CFnet2_PR = (NC - B)/PR
+				 ) %>% 
+	group_by(sim_name, sim) %>% 
+	mutate(FR_lt80_cum   = cumany( FR_MA < 80),
+				 FR_lt60_cum   = cumany( FR_MA < 60),
+				 FR_lt80_noncum   = ( FR_MA < 80),
+				 FR_lt60_noncum   = ( FR_MA < 60),
+				 FR_gt100_noncum  = FR_MA >= 99.99,
+				 # CFnet_lt5 = 
+ 				 
+				 ) %>% 
+	group_by(sim_name, year) %>% 
+	summarise(FR_lt80_cum  = sum(FR_lt80_cum)/n(),
+						FR_lt60_cum  = sum(FR_lt60_cum)/n(),
+						FR_lt80_noncum  = sum(FR_lt80_noncum)/n(),
+						FR_lt60_noncum  = sum(FR_lt60_noncum)/n(),
+						FR_gt100_noncum = sum(FR_gt100_noncum)/n(),
+						.groups = "drop")
+
+
+
+fig_title <- "Probability of funded ratio falling below 80% or 60% \nat least once up to the given year"
+fig_FRlow_cum <- 
+df_FR %>% 
+	filter(sim_name %in% names(runs_select)) %>% 
+	mutate(sim_name = factor(sim_name, levels = runs_select_df$sim_name, labels = runs_select_df$sim_label)) %>% 
+	select(sim_name, year, FR_lt80_cum, FR_lt60_cum) %>% 
+	gather(Var, value, -sim_name, -year) %>% 
+	mutate(Var = factor(Var, 
+											levels = c("FR_lt80_cum", "FR_lt60_cum"),
+											labels = c("Funded ratio < 80%", "Funded ratio < 60%" )
+											)) %>% 
+	ggplot(aes(x = year, y = value, color = sim_name)) + 
+	facet_grid(.~Var) +
+	geom_line() +
+	geom_point() + 
+	coord_cartesian(ylim = ylim_section) +
+	scale_color_manual(values = c(brewer_pal(type = "qual", palette = 3 )(7)) ) + 
+	scale_y_continuous(breaks = ybreaks, labels = function(x) percent(x, accuracy = 1)) +
+	scale_x_continuous(breaks = seq(2020, 2100, 5)) +
+	labs(title = fig_title,
+			 x = "Year",
+			 y = "Probability",
+			 color = "Policy"
+			 ) + 
+	guides(color = guide_legend(keywidth = 1.5, keyheight = 2.5)
+				 #shape = guide_legend(keywidth = 1.5, keyheight = 2.5)
+				 )
+
+#fig_FRlow_cum 
+
+
+fig_title <- "Probability of funded ratio below 80% or 60% in the given year"
+fig_FRlow_noncum <- 
+df_FR %>% 
+	filter(sim_name %in% names(runs_select)) %>% 
+	mutate(sim_name = factor(sim_name, levels = runs_select_df$sim_name, labels = runs_select_df$sim_label)) %>% 
+	select(sim_name, year, FR_lt80_noncum, FR_lt60_noncum) %>% 
+	gather(Var, value, -sim_name, -year) %>% 
+	mutate(Var = factor(Var, 
+											levels = c("FR_lt80_noncum", "FR_lt60_noncum"),
+											labels = c("Funded ratio < 80%", "Funded ratio < 60%" )
+											)) %>% 
+	ggplot(aes(x = year, y = value, color = sim_name)) + 
+	facet_grid(.~Var) +
+	geom_line() +
+	geom_point() + 
+	coord_cartesian(ylim = ylim_section) +
+	scale_color_manual(values = c(brewer_pal(type = "qual", palette = 3 )(7)) ) + 
+	scale_y_continuous(breaks = ybreaks, labels = function(x) percent(x, accuracy = 1)) +
+	scale_x_continuous(breaks = seq(2020, 2100, 5)) +
+	labs(title = fig_title,
+			 x = "Year",
+			 y = "Probability",
+			 color = "Policy"
+			 ) + 
+	guides(color = guide_legend(keywidth = 1.5, keyheight = 2.5)
+				 #shape = guide_legend(keywidth = 1.5, keyheight = 2.5)
+				 )
+
+#fig_FRlow_noncum 
+
+
+fig_title <- "Probability of funded ratio above 100% in the given year"
+fig_FR_full<- 
+df_FR %>% 
+	filter(sim_name %in% names(runs_select)) %>% 
+	mutate(sim_name = factor(sim_name, levels = runs_select_df$sim_name, labels = runs_select_df$sim_label)) %>% 
+	select(sim_name, year, FR_gt100_noncum) %>% 
+	gather(Var, value, -sim_name, -year) %>% 
+	# mutate(Var = factor(Var, 
+	# 										levels = c("FR_lt80_noncum", "FR_lt60_noncum"),
+	# 										labels = c("Funded ratio < 80%", "Funded ratio < 60%" )
+	# 										)) %>% 
+	ggplot(aes(x = year, y = value, color = sim_name)) + 
+	# facet_grid(.~Var) +
+	geom_line() +
+	geom_point() + 
+	coord_cartesian(ylim = ylim_section) +
+	scale_color_manual(values = c(brewer_pal(type = "qual", palette = 3 )(7)) ) + 
+	scale_y_continuous(breaks = seq(0, 1, 0.1), labels = function(x) percent(x, accuracy = 1)) +
+	scale_x_continuous(breaks = seq(2020, 2100, 5)) +
+	labs(title = fig_title,
+			 x = "Year",
+			 y = "Probability",
+			 color = "Policy"
+			 ) + 
+	guides(color = guide_legend(keywidth = 1.5, keyheight = 2.5)
+				 #shape = guide_legend(keywidth = 1.5, keyheight = 2.5)
+				 )
+
+#fig_FR_full
+
+
+
+# fig_ERC_hike
+
+# fig_EEC_hike
+	
+# gridExtra::grid.arrange(fig_ERC_hike, fig_EEC_hike, ncol = 2)
+```
+
+### Risk of low funded ratio (cumulative) {.unnumbered}
+
+```{r echo=FALSE, fig.width= 11, fig.height= 5}
+fig_FRlow_cum
+```
+
+### Risk of low funded ratio (non-cumulative) {.unnumbered}
+
+```{r echo=FALSE, fig.width= 11, fig.height= 5}
+fig_FRlow_noncum
+```
+
+### Probability of full funding {.unnumbered}
+
+```{r echo=FALSE}
+fig_FR_full
+```
+
+## **Analysis of member benefit** {.tabset}
+
+Cohort examined:
+
+-   Joined the plan at age 25 in 1986
+-   Start receiving benefit at age 60 in 2021
+-   live to age 90 (30 years in retirement)
+
+```{r benefit_prep, include = FALSE}
+
+# Cohorts to examine:
+	# Cohort 1: Retired at age 60 in 2021
+
+# Normalize the benefit at age 60 to 100. 
+# Need qxm.r in decrement table 
+
+# load("Inputs/riskShaing_demographics_100y.RData")
+
+
+get_benefit <- function(df, year1, span = 30, ret_age = 60){
+
+# 
+# df <- results_all	
+# year1 <- 2021
+# span       <- 30
+# ret_age <- 60
+
+if(span < 21) stop("span must be no less than 21")
+if(max(results_all$year) < year1 + span - 1) stop("Time span exceeds the max year in data.")
+
+
+## Create a model run with cola_actual = infl and append to results_all
+# df_colaFull <- 
+#   #results_all %>% 
+#   df %>% 
+# 	filter(runname == "baseline") %>% 
+# 	mutate(cola_actual = infl,
+# 				 runname     = "cola_full")
+
+## df of annual benefit payments and discount factors
+df_benefit <- 
+	#bind_rows(df, df_colaFull) %>%
+	df %>% 
+	filter(year %in% (year1 + seq_len(span) - 1)) %>% 
+	select(sim_name, sim, year, cola_actual) %>% 
+	group_by(sim_name, sim) %>% 
+	mutate(age = seq_len(span) - 1 + ret_age ) %>% 
+	# left_join(decrement %>% ungroup() %>% filter(ea == min(ea))  %>% select(age, qxm.r) , by = "age") %>% 
+	mutate(#qxm.r   = ifelse(age == max(age), 1, qxm.r),
+				 #fct_qxm = ifelse(age == 60, 1, lag(cumprod(1-qxm.r))),
+				 fct_dr      = 1/(1 + dr)^(age - ret_age),
+				 #fct_dr_low  = 1/(1 + dr_low)^(age - 60),
+				 B       = 100 * ifelse(age == ret_age, 1, lag(cumprod(1+cola_actual))),
+				 B_real  = B / (1 + infl)^(age - ret_age),
+				 B_real_chg5y = rollapply(B_real, width = 6, get_nyearMin, fill = NA, align = "right"),
+				 salary  = 100/(0.02*(60-25))
+				 )
+# 
+# df_benefit %>% 
+# 	filter(sim == 9)
+
+
+df_benefit_qtile <- 
+	df_benefit %>%
+	filter(sim >= 1) %>% 
+	group_by(sim_name, sim) %>% 
+	summarise(sim_name = unique(sim_name),
+						B_PV_dr    = sum(B * fct_dr),
+						#B_PV_tot   = sum(B* fct_dr * fct_qxm),
+						B_real_chg5yMin = min(B_real_chg5y, na.rm = TRUE),
+						B_real_age75   = B_real[age == 75],
+						replacement_real_age75 =  (B_real/salary)[age == 75]
+	) %>% 
+	summarise(sim_name = unique(sim_name),
+						
+						B_PV_dr_q90 = quantile(B_PV_dr, 0.90),
+						B_PV_dr_q75 = quantile(B_PV_dr, 0.75),
+						B_PV_dr_q50 = quantile(B_PV_dr, 0.50),
+						B_PV_dr_q25 = quantile(B_PV_dr, 0.25),
+						B_PV_dr_q10 = quantile(B_PV_dr, 0.1),
+						
+						# B_PV_tot_q90 = quantile(B_PV_tot, 0.90),
+						# B_PV_tot_q75 = quantile(B_PV_tot, 0.75),
+						# B_PV_tot_q50 = quantile(B_PV_tot, 0.50),
+						# B_PV_tot_q25 = quantile(B_PV_tot, 0.25),
+						# B_PV_tot_q10 = quantile(B_PV_tot, 0.1),
+						
+						B_real_chg5yMin_q90 = quantile(B_real_chg5yMin, 0.90),
+						B_real_chg5yMin_q75 = quantile(B_real_chg5yMin, 0.75),
+						B_real_chg5yMin_q50 = quantile(B_real_chg5yMin, 0.50),
+						B_real_chg5yMin_q25 = quantile(B_real_chg5yMin, 0.25),
+						B_real_chg5yMin_q10 = quantile(B_real_chg5yMin, 0.1),
+						
+						B_real_age75_q90 = quantile(B_real_age75, 0.90),
+						B_real_age75_q75 = quantile(B_real_age75, 0.75),
+						B_real_age75_q50 = quantile(B_real_age75, 0.50),
+						B_real_age75_q25 = quantile(B_real_age75, 0.25),
+						B_real_age75_q10 = quantile(B_real_age75, 0.1),
+						
+						replacement_real_age75_q90 = quantile(replacement_real_age75, 0.90),
+						replacement_real_age75_q75 = quantile(replacement_real_age75, 0.75),
+						replacement_real_age75_q50 = quantile(replacement_real_age75, 0.50),
+						replacement_real_age75_q25 = quantile(replacement_real_age75, 0.25),
+						replacement_real_age75_q10 = quantile(replacement_real_age75, 0.1),
+						
+						.groups = "drop"
+						)
+
+list(
+	benefit       = df_benefit,
+	benefit_qtile = df_benefit_qtile 
+)
+
+}
+
+
+df_benefit_y30  <- get_benefit(results_all, year1 = 2021, span = 30, ret_age = 60)
+
+
+df_benefit_y30$benefit_qtile
+
+
+
+run_base <- "regularAll_sharedADC_vCola"
+
+runs_select_ben_df <- 
+	runs_select_df %>% 
+	filter(sim_name %in% c("regularAll_sharedADC_vCola",
+												  "regularAll_sharedADC_fixedCola"
+												 ))
+
+
+## Table of distribution of PV benefit
+
+tbl_pvB <- 
+  df_benefit_y30$benefit_qtile %>% 
+	filter(sim_name %in% runs_select_ben_df$sim_name) %>% 
+	select(sim_name, starts_with("B_PV_dr")) %>% 
+	gather(Var, value, -sim_name) %>% 
+	mutate(#value = 100 * value / value[sim_name == run_base& str_detect(Var, "q50")],
+				 Var   = paste0(str_extract(Var, "\\d+"), "th") ,
+				 Var   = factor(Var) %>% fct_inorder()
+				 ) %>% 
+	spread(Var, value) %>% 
+	left_join(runs_select_df, by = "sim_name") %>% 
+	select(sim_label, everything(), -sim_name) %>% 
+	gt %>% 
+	cols_label(sim_label = "Policy") %>% 
+	fmt_number(
+		contains("th"),
+		decimals = 0) %>% 
+	tab_header(
+		title = html("Distribution of 30-year present value of benefit"),
+		subtitle = "For members who retire at age 60 with 35 years of service in 2021"
+	) %>% 
+	tab_source_note(
+		source_note = "Note: starting benefit is normalized to $100"
+	)
+
+tbl_pvB
+
+
+## Table of distribution of replacement rate (real) at age 75
+
+tbl_replacment <- 
+  df_benefit_y30$benefit_qtile %>% 
+	filter(sim_name %in% runs_select_ben_df$sim_name) %>% 
+	select(sim_name, starts_with("replacement")) %>% 
+	gather(Var, value, -sim_name) %>% 
+	mutate(#value = 100 * value / value[sim_name == run_base& str_detect(Var, "q50")],
+				 Var   = paste0(str_extract(Var, "q\\d+"), "th") ,
+				 Var   = paste0(str_extract(Var, "\\d+"), "th") ,
+				 Var   = factor(Var) %>% fct_inorder()
+				 ) %>% 
+	spread(Var, value) %>% 
+	left_join(runs_select_df, by = "sim_name") %>% 
+	select(sim_label, everything(), -sim_name) %>% 
+	gt %>% 
+	cols_label(sim_label = "Policy") %>% 
+	fmt_number(
+		contains("th"),
+		decimals = 2) %>% 
+	tab_header(
+		title = html("Distribution of replacement rate at age 75"),
+		subtitle = "For members who retire at age 60 with 35 years of service in 2021"
+	) %>% 
+	tab_source_note(
+		source_note = "Note: benefits at age 75 are adjusted for inflation; assumed inflation = 2.75% (MEPERS assumption) "
+	)
+
+
+tbl_replacment
+
+
+```
+
+### distribution of present value of benefit {.unnumbered}
+
+```{r echo=FALSE}
+tbl_pvB
+```
+
+### distribution of replacement rate at age 75 {.unnumbered}
+
+```{r echo=FALSE}
+tbl_replacment
+```
