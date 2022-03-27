@@ -1,5 +1,5 @@
 ---
-title: "Modeling MainePERS: Preliminary results for discussion"
+title: "Maine Public Employee Retirement System (MainePERS): Modeling approach and simulation results"
 output:
   html_notebook:
     toc: yes
