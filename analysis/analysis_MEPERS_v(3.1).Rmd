@@ -21,7 +21,7 @@ Key policy features:
 
 2.  **Contribution caps**. The employer and employee contribution rates are capped at 12.5% and 9%, respectively.
 
-3.  **Variable COLA**. If the combined employer-employee ADC rates exceed the cap (ADC rate \>= 21.5%), COLA will be reduced to maintain "cost-neutrality", but not below zero. If the reduction otherwise would have been below zero, then zero COLA will be applied and capped contributions will be paid in following years until "cost neutrality" is achieved achieved (i.e., until the ADC falls to or below the cap).
+3.  **Variable COLA**. If the combined employer-employee ADC rates exceed the cap (ADC rate \>= 21.5%), COLA will be reduced to maintain "cost-neutrality", but not below zero. If the reduction otherwise would have been below zero, then zero COLA will be applied and capped contributions will be paid in following years until "cost neutrality" is achieved (i.e., until the ADC falls to or below the cap).
 
 
 # **Summary of modeling approach**
@@ -42,12 +42,12 @@ To examine the impact of the MEPERS risk-sharing features on plan costs, funded 
 
     -   The shared-ADC policy is the same as 1.
     
-    -   COLA rate is fiexed at 1.91%.
+    -   COLA rate is fixed at 1.91%.
 
 3.  **EEC as a fixed percentage of normal cost**
 
     -   Only normal cost is shared. EEC = 48% of normal cost (about 6\~7% of payroll). Amortization costs are not shared with employees.
-    -   COLA rate is fiexed at 1.91%.
+    -   COLA rate is fixed at 1.91%.
 
 **Note**: In 1 and 2, EEC rate can fall to as low as 0%. To make 3 comparable to 1 and 2, EEC are allowed to fall below 48% of NC if the total ADC rate is lower than 48% of NC due to negative amortization cost; EEC rate is still floored at 0%.
 
@@ -868,7 +868,7 @@ df_C_hike %>%
 
 #### Risk of sharp ERC increase {.unnumbered}
 
-This graph shows the probability that the ERC rate will rise by more than 10 percentage points within any 5-year period leading up to the current year. For example, in 2035 it shows the probability that the ERC rose by 10 percentage points or more in any prior 5-year period (2020-2024, 2021-2025, ..., 2031-2035). This is designed to show whether the government was likely to face a sharp increase in contribution costs in a short period of time, during the period examined .
+This graph shows the probability that the ERC rate will rise by more than 10 percentage points within any 5-year period leading up to the current year. For example, in 2035 it shows the probability that the ERC rose by 10 percentage points or more in any prior 5-year period (2020-2024, 2021-2025, ..., 2031-2035). This is designed to show whether the government was likely to face a sharp increase in contribution costs in a short period of time, during the period examined.
 
 ```{r echo=FALSE}
 fig_ERC_hike
