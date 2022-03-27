@@ -1,5 +1,5 @@
 ---
-title: "Modeling MEPERS: Preliminary results for discussion"
+title: "Modeling MainePERS: Preliminary results for discussion"
 output:
   html_notebook:
     toc: yes
@@ -28,9 +28,9 @@ Key policy features:
 
 ## Policy scenarios
 
-To examine the impact of the MEPERS risk-sharing features on plan costs, funded status, and member benefit, we run the simulation under the following three policy scenarios.
+To examine the impact of the MainePERS risk-sharing features on plan costs, funded status, and member benefit, we run the simulation under the following three policy scenarios.
 
-1.  **Shared-ADC and variable COLA** (MEPERS policy)
+1.  **Shared-ADC and variable COLA** (MainePERS policy)
 
     -   EEC = 48% \* ADC, capped at 9% of payroll
     
@@ -79,7 +79,7 @@ To examine the impact of the MEPERS risk-sharing features on plan costs, funded 
     -   Amortization of UAAL: 20-year level-percent closed amortization
 
 ## Questions about valuation with variable COLA 
-We need to better understand how the adjustable COLA is reflected in actuarial valuation calculations of liability in MEPERS. We are not sure what assumption they use about future COLAs when calculating the COLA reduction needed to bring the contribution rates under the caps. There are at least two possibilities:
+We need to better understand how the adjustable COLA is reflected in actuarial valuation calculations of liability in MainePERS. We are not sure what assumption they use about future COLAs when calculating the COLA reduction needed to bring the contribution rates under the caps. There are at least two possibilities:
 
 - Assume that the reduced COLA will be applied only in the next year, and then use the regular COLA assumptions (1.91%) for following years.
 
@@ -118,7 +118,7 @@ source(here::here("/analysis/analysis_loadingResults.R"))
 
 
 runs_select <- c(
-    regularAll_sharedADC_vCola     = "Shared ADC; caps; \nVariable COLA (MEPERS)",
+    regularAll_sharedADC_vCola     = "Shared ADC; caps; \nVariable COLA (MainePERS)",
 		regularAll_sharedADC_fixedCola = "Shared ADC; caps; \nFixed COLA",
 		regularAll_sharedNC_fixedCola  = "Shared NC; no caps; \nFixed COLA"
 )
@@ -1227,7 +1227,7 @@ tbl_replacment <-
 		subtitle = "For members who retire at age 60 with 35 years of service in 2021"
 	) %>% 
 	tab_source_note(
-		source_note = "Note: benefits at age 75 are adjusted for inflation; assumed inflation = 2.75% (MEPERS assumption) "
+		source_note = "Note: benefits at age 75 are adjusted for inflation; assumed inflation = 2.75% (MainePERS assumption) "
 	)
 
 
